@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="23303e1f-f456-42ff-ae4b-19b8b5b1d8c8" name="Default Changelist" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="v2" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="JupyterTrust" id="30227a4b-84ff-43a5-a4ec-28aa3e787a64" />
+  <component name="ProjectId" id="1kkWPWDGCVYIAkjwSfirdr2wg3q" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/packages/obstacle_tracking" />
+    <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/packages/obstacle_tracking" />
+    </key>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="23303e1f-f456-42ff-ae4b-19b8b5b1d8c8" name="Default Changelist" comment="" />
+      <created>1606245045369</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1606245045369</updated>
+      <workItem from="1606245046383" duration="488000" />
+    </task>
+    <task id="LOCAL-00001" summary="Initial dump">
+      <created>1606245189589</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1606245189589</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Initial dump" />
+    <option name="LAST_COMMIT_MESSAGE" value="Initial dump" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="529" y="119" width="924" height="876" key="CommitChangelistDialog2" timestamp="1606245189492">
+      <screen x="72" y="27" width="1848" height="1053" />
+    </state>
+    <state x="529" y="119" width="924" height="876" key="CommitChangelistDialog2/72.27.1848.1053@72.27.1848.1053" timestamp="1606245189492" />
+    <state x="935" y="290" width="824" height="533" key="IDE.errors.dialog" timestamp="1606245531764">
+      <screen x="72" y="27" width="1848" height="1053" />
+    </state>
+    <state x="935" y="290" width="824" height="533" key="IDE.errors.dialog/72.27.1848.1053@72.27.1848.1053" timestamp="1606245531764" />
+    <state x="591" y="289" width="800" height="535" key="Vcs.Push.Dialog.v2" timestamp="1606245413565">
+      <screen x="72" y="27" width="1848" height="1053" />
+    </state>
+    <state x="591" y="289" width="800" height="535" key="Vcs.Push.Dialog.v2/72.27.1848.1053@72.27.1848.1053" timestamp="1606245413565" />
+    <state x="869" y="400" width="254" height="314" key="cloudConfig.SelfSettingsDialog" timestamp="1606245523615">
+      <screen x="72" y="27" width="1848" height="1053" />
+    </state>
+    <state x="869" y="400" width="254" height="314" key="cloudConfig.SelfSettingsDialog/72.27.1848.1053@72.27.1848.1053" timestamp="1606245523615" />
+    <state x="777" y="468" width="428" height="177" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1606245393075">
+      <screen x="72" y="27" width="1848" height="1053" />
+    </state>
+    <state x="777" y="468" width="428" height="177" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/72.27.1848.1053@72.27.1848.1053" timestamp="1606245393075" />
+  </component>
+</project>
