@@ -1,41 +1,22 @@
 #!/usr/bin/env python3
 
-import cv2
 import rospy
 from cv_bridge import CvBridge
-from duckietown.dtros import DTROS, NodeType, TopicType, DTParam, ParamType
-from sensor_msgs.msg import CompressedImage, Image
-from duckietown_msgs.msg import BoolStamped, VehicleCorners
-from geometry_msgs.msg import Point32
+from duckietown.dtros import DTROS, NodeType, DTParam, ParamType
+from duckietown_msgs.msg import BoolStamped, ObstacleImageDetection, ObstacleType, Rect, ObstacleImageDetectionList
+from sensor_msgs.msg import CompressedImage
+from tflite_runtime.interpreter import Interpreter
+import numpy as np
+import time
+from PIL import Image
 
 
-class VehicleDetectionNode(DTROS):
-    """
-    This node detects if there is another Duckiebot in the image. This is done by recognizing the pattern of circles on
-    the back of every robot.
-
-    Args:
-        node_name (:obj:`str`): a unique, descriptive name for the node that ROS will use
-
-    Configuration:
-        ~process_frequency (:obj:`float`): Frequency at which to process the incoming images
-        ~circlepattern_dims (:obj:`list` of `int`): Number of dots in the pattern, two elements: [number of columns, number of rows]
-        ~blobdetector_min_area (:obj:`int`): Parameter for the blob detector, passed to `SimpleBlobDetector <https://docs.opencv.org/4.3.0/d0/d7a/classcv_1_1SimpleBlobDetector.html>`_
-        ~blobdetector_min_dist_between_blobs (:obj:`str`): Parameter for the blob detector, passed to `SimpleBlobDetector <https://docs.opencv.org/4.3.0/d0/d7a/classcv_1_1SimpleBlobDetector.html>`_
-
-    Subscriber:
-        ~image (:obj:`sensor_msgs.msg.CompressedImage`): Input image
-
-    Publishers:
-        ~centers (:obj:`duckietown_msgs.msg.VehicleCorners`): Detected pattern (if any)
-        ~debug/detection_image/compressed (:obj:`sensor_msgs.msg.CompressedImage`): Debug image that shows the detected pattern
-        ~detection (:obj:`boolStamped`): Vehicle Detection Flag
-    """
+class ObstacleDetectionNode(DTROS):
 
     def __init__(self, node_name):
 
         # Initialize the DTROS parent class
-        super(VehicleDetectionNode, self).__init__(
+        super(ObstacleDetectionNode, self).__init__(
             node_name=node_name,
             node_type=NodeType.PERCEPTION
         )
@@ -43,100 +24,116 @@ class VehicleDetectionNode(DTROS):
         # Initialize the parameters
         self.process_frequency = DTParam('~process_frequency',
                                          param_type=ParamType.FLOAT)
-        self.circlepattern_dims = DTParam('~circlepattern_dims',
-                                          param_type=ParamType.LIST)
-        self.blobdetector_min_area = DTParam('~blobdetector_min_area',
-                                             param_type=ParamType.FLOAT)
-        self.blobdetector_min_dist_between_blobs = DTParam('~blobdetector_min_dist_between_blobs',
-                                                           param_type=ParamType.FLOAT)
-
-        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        #
-        self.cbParametersChanged()  # TODO: THIS SHOULD BE FIXED IN THE NEW DTROS!!!!!!!!!!
-        #
-        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         self.bridge = CvBridge()
 
         self.last_stamp = rospy.Time.now()
 
+        self.rate_limitation = rospy.Duration.from_sec(1.0 / self.process_frequency.value)
+
         # Subscriber
         self.sub_image = rospy.Subscriber("~image", CompressedImage, self.cb_image, queue_size=1)
 
         # Publishers
-        self.pub_centers = rospy.Publisher("~centers", VehicleCorners, queue_size=1)
-        self.pub_circlepattern_image = rospy.Publisher("~debug/detection_image/compressed", CompressedImage,
-                                                       queue_size=1)
-        self.pub_detection_flag = rospy.Publisher("~detection", BoolStamped, queue_size=1)
+        self.pub_detection_image = rospy.Publisher("~debug/detection_image/compressed", CompressedImage,
+                                                   queue_size=1)
+        self.pub_detection_flag = rospy.Publisher("~detection/flag", BoolStamped, queue_size=1)
+
+        # DNN Configuration
+        # TODO: Frank fix this shit to load from config!
+        self.category_index = {1: {'id': 1, 'name': 'cone'},
+                               2: {'id': 2, 'name': 'duckie'},
+                               3: {'id': 3, 'name': 'duckiebot'}}
+        self.model = "mobileNet-v2.tflite"
+        self.detection_threashold = 0.1
+
+        self.interpreter = Interpreter(self.model)
+        self.interpreter.allocate_tensors()
+        _, self.input_height, self.input_width, _ = self.interpreter.get_input_details()[0]['shape']
+
         self.log("Initialization completed.")
 
-    def cbParametersChanged(self):
-
-        # TODO: THIS DOESN'T WORK WITH THE NEW DTROS!!!
-        self.publish_duration = rospy.Duration.from_sec(1.0 / self.process_frequency.value)
-        params = cv2.SimpleBlobDetector_Params()
-        params.minArea = self.blobdetector_min_area.value
-        params.minDistBetweenBlobs = self.blobdetector_min_dist_between_blobs.value
-        self.simple_blob_detector = cv2.SimpleBlobDetector_create(params)
-
     def cb_image(self, image_msg):
-        """
-        Callback for processing a image which potentially contains a back pattern. Processes the image only if
-        sufficient time has passed since processing the previous image (relative to the chosen processing frequency).
 
-        The pattern detection is performed using OpenCV's `findCirclesGrid <https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html?highlight=solvepnp#findcirclesgrid>`_ function.
-
-        Args:
-            image_msg (:obj:`sensor_msgs.msg.CompressedImage`): Input image
-
-        """
+        # Rate Limitation
         now = rospy.Time.now()
-        if now - self.last_stamp < self.publish_duration:
+        if now - self.last_stamp < self.rate_limitation:
             return
         else:
             self.last_stamp = now
 
-        vehicle_centers_msg_out = VehicleCorners()
+        # Setup Messages
         detection_flag_msg_out = BoolStamped()
+
+        # Obtain Image
         image_cv = self.bridge.compressed_imgmsg_to_cv2(image_msg, "bgr8")
 
-        (detection, centers) = cv2.findCirclesGrid(image_cv,
-                                                   patternSize=tuple(self.circlepattern_dims.value),
-                                                   flags=cv2.CALIB_CB_SYMMETRIC_GRID,
-                                                   blobDetector=self.simple_blob_detector)
+        # DNN Inference
+        # TODO: Implement DNN Inference
+        image = Image.fromarray(image_cv).convert('RGB').resize(
+            (self.input_width, self.input_height), Image.ANTIALIAS)
+        (im_width, im_height) = image.size
+        start_time = time.monotonic()
+        results = self.detect_objects(self.interpreter, image, self.detection_threashold)
+        elapsed_ms = (time.monotonic() - start_time) * 1000
+        print("Total time cost: {} ms".format(elapsed_ms))
+        image_canvas = np.array(image.getdata()).reshape(
+            (im_height, im_width, 3)).astype(np.uint8)
+        print(results)
 
-        # if the pattern is detected, cv2.findCirclesGrid returns a non-zero result, otherwise it returns 0
-        # vehicle_detected_msg_out.data = detection > 0
-        # self.pub_detection.publish(vehicle_detected_msg_out)
-
-        vehicle_centers_msg_out.header = image_msg.header
-        vehicle_centers_msg_out.detection.data = detection > 0
+        # Publish Detection Flag if obstacle is seen
         detection_flag_msg_out.header = image_msg.header
-        detection_flag_msg_out.data = detection > 0
-
-        # if the detection is successful add the information about it,
-        # otherwise publish a message saying that it was unsuccessful
-        if detection > 0:
-            points_list = []
-            for point in centers:
-                center = Point32()
-                center.x = point[0, 0]
-                center.y = point[0, 1]
-                center.z = 0
-                points_list.append(center)
-            vehicle_centers_msg_out.corners = points_list
-            vehicle_centers_msg_out.H = self.circlepattern_dims.value[1]
-            vehicle_centers_msg_out.W = self.circlepattern_dims.value[0]
-
-        self.pub_centers.publish(vehicle_centers_msg_out)
+        detection_flag_msg_out.data = (len(results["score"]) > 0)
         self.pub_detection_flag.publish(detection_flag_msg_out)
-        if self.pub_circlepattern_image.get_num_connections() > 0:
-            cv2.drawChessboardCorners(image_cv,
-                                      tuple(self.circlepattern_dims.value), centers, detection)
+
+        # Visualize detection
+        if detection_flag_msg_out.data:
+            # TODO: Draw Bounding Box here
+            image_cv = None
             image_msg_out = self.bridge.cv2_to_compressed_imgmsg(image_cv)
-            self.pub_circlepattern_image.publish(image_msg_out)
+            self.pub_detection_image.publish(image_msg_out)
+
+    def set_input_tensor(self, interpreter, image):
+        """Sets the input tensor."""
+        tensor_index = interpreter.get_input_details()[0]['index']
+        input_tensor = interpreter.tensor(tensor_index)()[0]
+        input_tensor[:, :] = image
+
+    def get_output_tensor(self, interpreter, index):
+        """Returns the output tensor at the given index."""
+        output_details = interpreter.get_output_details()[index]
+        tensor = np.squeeze(interpreter.get_tensor(output_details['index']))
+        return tensor
+
+    def limit_bound(self, val):
+        return min(max(0, val), 1)
+
+    def detect_objects(self, interpreter, image, threshold):
+        """Returns a list of detection results, each a dictionary of object info."""
+        self.set_input_tensor(interpreter, image)
+        interpreter.invoke()
+        print(interpreter.get_output_details())
+        # Get all output details
+        boxes = self.get_output_tensor(interpreter, 0)
+        classes = self.get_output_tensor(interpreter, 1)
+        scores = self.get_output_tensor(interpreter, 2)
+        count = int(self.get_output_tensor(interpreter, 3))
+        (im_width, im_height) = image.size
+        results = {'bounding_box': [], 'class_id': [], 'score': []}
+        print(boxes)
+        for i in range(count):
+            if scores[i] >= threshold:
+                results['bounding_box'].append([
+                    self.limit_bound(boxes[i][0]) * im_height, self.limit_bound(boxes[i][1]) * im_width,
+                    self.limit_bound(boxes[i][2]) * im_height, self.limit_bound(boxes[i][3]) * im_width])
+                results['class_id'].append(classes[i].astype(int) + 1)
+                results['score'].append(scores[i])
+        results['bounding_box'] = np.array(results['bounding_box'])
+        results['class_id'] = np.array(results['class_id'])
+        results['score'] = np.array(results['score'])
+        return results
 
 
 if __name__ == '__main__':
-    vehicle_detection_node = VehicleDetectionNode('vehicle_detection')
+    vehicle_detection_node = ObstacleDetectionNode('obstacle_detection')
     rospy.spin()

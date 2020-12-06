@@ -2,10 +2,10 @@
 <package>
   <name>obstacle_detection</name>
   <version>1.0.0</version>
-  <description>This package is responsible for invoking a neural network to detect obstacle on the road</description>
+  <description>Obstacle Detection node using MobileNet-V2.</description>
 
-  <maintainer email="chude.qian@autodrive.utoronto.ca">Frank (Chude) Qian</maintainer>
-  <author email="chude.qian@autodrive.utoronto.ca">Frank (Chude) Qian</author>
+  <maintainer email="frank1@ieee.org">Frank</maintainer>
+  <author email="frank1@ieee.org">Frank Chude Qian</author>
 
   <license>GPLv3</license>
 
