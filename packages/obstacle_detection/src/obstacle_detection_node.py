@@ -135,5 +135,5 @@ class ObstacleDetectionNode(DTROS):
 
 
 if __name__ == '__main__':
-    vehicle_detection_node = ObstacleDetectionNode('obstacle_detection')
+    obstacle_detection_node = ObstacleDetectionNode('obstacle_detection')
     rospy.spin()
