@@ -44,7 +44,7 @@ class ObstacleTrackingNode(DTROS):
 
         self.latest_bbox = None
 
-        self.trackers = cv2.MultiTracker_create()
+        self.trackers = None
 
         self.tracker_order = []
 
@@ -62,6 +62,13 @@ class ObstacleTrackingNode(DTROS):
 
         self.log("Initialization completed.")
 
+    def update_bboxes(self, success, boxes, og_msg):
+        for (asuccess, abox, adetection) in zip(success, boxes, self.tracker_order):
+            if not asuccess:
+                pass
+            else:
+                pass
+
     def cb_image(self, image_msg):
         self.base_image = self.bridge.compressed_imgmsg_to_cv2(image_msg, "bgr8")
         if self.latest_bbox is None or len(self.latest_bbox) == 0:
@@ -70,18 +77,21 @@ class ObstacleTrackingNode(DTROS):
             return
         else:
             success, boxes = self.trackers.update(self.base_image)
+
+            new_detection = ObstacleImageDetectionList
+
             for i, newbox in enumerate(boxes):
                 p1 = (int(newbox[0]), int(newbox[1]))
                 p2 = (int(newbox[0] + newbox[2]), int(newbox[1] + newbox[3]))
                 # TODO: Fix drawing bbox
-                #cv2.rectangle(frame, p1, p2, colors[i], 2, 1)
+                # cv2.rectangle(frame, p1, p2, colors[i], 2, 1)
 
                 # TODO: Publish Image here;;;
             return
 
     def cb_detection(self, detection_msg):
         self.latest_bbox = detection_msg.list
-        self.trackers = None
+        self.trackers = cv2.MultiTracker_create()
         for detection in detection_msg.list:
             self.tracker_order.append(detection.type)
             local_bbox = [detection.rect.x, detection.rect.y, detection.rect.w, detection.rect.h]
